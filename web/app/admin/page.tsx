@@ -7,12 +7,18 @@ import { getContract, prepareContractCall, sendTransaction } from "thirdweb";
 import { sepolia } from "thirdweb/chains";
 import { client } from "../../src/lib/client";
 
+// --- role + tokenId helpers (SINGLE source of truth) ---
+const ROLE_VALUES = ["investor", "donor", "ops"] as const;
+type Role = typeof ROLE_VALUES[number];
+
+function tokenIdFor(projectId: number, role: Role) {
+  const map = { investor: 1, donor: 2, ops: 3 } as const;
+  return BigInt(projectId * 100 + map[role]);
+}
+
 const ACCESS_ERC1155 = process.env.NEXT_PUBLIC_ACCESS_ERC1155 as `0x${string}`;
 
-// role -> id helper
-const roleToId = (r: "investor" | "donor" | "ops") => (r === "investor" ? 1 : r === "donor" ? 2 : 3);
-
-// Minimal ABI (functions we call + AccessControl error for clear messages)
+// Minimal ABI (only what we call)
 const abi = [
   {
     inputs: [
@@ -21,16 +27,6 @@ const abi = [
       { internalType: "uint256", name: "amount", type: "uint256" },
     ],
     name: "mint",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      { internalType: "address[]", name: "recipients", type: "address[]" },
-      { internalType: "uint256", name: "tokenId", type: "uint256" },
-    ],
-    name: "mintBatch",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -60,19 +56,30 @@ export default function Admin() {
   const account = useActiveAccount(); // AA address when connected
   const [address, setAddress] = useState("");
   const [projectId, setProjectId] = useState(1);
-  const [role, setRole] = useState<"investor" | "donor" | "ops">("investor");
+  const [role, setRole] = useState<Role>("investor");
   const [status, setStatus] = useState<string>("");
 
   const contract = getContract({ client, chain: sepolia, address: ACCESS_ERC1155, abi });
 
+  const ensureAddress = () => {
+    if (address && address.startsWith("0x") && address.length === 42) return true;
+    setStatus("Enter a valid 0x address or click “Use connected address”.");
+    return false;
+  };
+
   async function mintOne() {
     if (!account) return setStatus("Connect as an admin with MINTER_ROLE.");
+    if (!ensureAddress()) return;
     try {
       setStatus("Minting...");
-      const tokenId = BigInt(projectId * 100 + roleToId(role));
-      const tx = prepareContractCall({ contract, method: "mint", params: [address as `0x${string}`, tokenId, 1n] });
+      const id = tokenIdFor(projectId, role);
+      const tx = prepareContractCall({
+        contract,
+        method: "mint",
+        params: [address as `0x${string}`, id, 1n],
+      });
       await sendTransaction({ account, transaction: tx });
-      setStatus(`✅ Minted tokenId ${tokenId.toString()} to ${address}`);
+      setStatus(`✅ Minted tokenId ${id.toString()} to ${address}`);
     } catch (e: any) {
       const msg = String(e?.message || e);
       if (msg.includes("AccessControlUnauthorizedAccount") || msg.includes("missing role")) {
@@ -85,12 +92,17 @@ export default function Admin() {
 
   async function burnOne() {
     if (!account) return setStatus("Connect as an admin with MINTER_ROLE.");
+    if (!ensureAddress()) return;
     try {
       setStatus("Burning...");
-      const tokenId = BigInt(projectId * 100 + roleToId(role));
-      const tx = prepareContractCall({ contract, method: "burn", params: [address as `0x${string}`, tokenId, 1n] });
+      const id = tokenIdFor(projectId, role);
+      const tx = prepareContractCall({
+        contract,
+        method: "burn",
+        params: [address as `0x${string}`, id, 1n],
+      });
       await sendTransaction({ account, transaction: tx });
-      setStatus(`✅ Burned tokenId ${tokenId.toString()} from ${address}`);
+      setStatus(`✅ Burned tokenId ${id.toString()} from ${address}`);
     } catch (e: any) {
       const msg = String(e?.message || e);
       if (msg.includes("AccessControlUnauthorizedAccount") || msg.includes("missing role")) {
@@ -147,8 +159,8 @@ export default function Admin() {
         <label>Role</label>
         <select
           value={role}
-          onChange={(e) => setRole(e.target.value as any)}
-          style={{ padding: 10, borderRadius: 8, border: "1px solid #2a2f36", background: "#0f1117", color: "white", width: 200 }}
+          onChange={(e) => setRole(e.target.value as Role)}
+          style={{ padding: 8, borderRadius: 6 }}
         >
           <option value="investor">Investor (1)</option>
           <option value="donor">Donor (2)</option>
@@ -165,3 +177,4 @@ export default function Admin() {
     </div>
   );
 }
+
