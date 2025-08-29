@@ -1,17 +1,15 @@
 [build]
   base = "web"
-  command = "npm ci && npx prisma generate && npm run build"
+  command = "npm ci && npx prisma generate && npx prisma migrate deploy && npm run build"
   publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
 
-# ✅ Ensure Netlify’s Next runtime is used (builds SSR/API functions)
+# Use Netlify’s Next.js runtime so SSR/API routes work
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-# ✅ Ensure Prisma client/DB are available inside serverless functions
+# Serverless functions bundling (safe defaults)
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["@prisma/client", "prisma", "thirdweb", "viem"]
-  included_files = ["prisma/**"]
