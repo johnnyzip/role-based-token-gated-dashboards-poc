@@ -1,41 +1,69 @@
-import { notFound } from "next/navigation";
-import { cookies } from "next/headers";
+import Link from "next/link";
+import { headers, cookies } from "next/headers";
 
-async function fetchData(projectId: string) {
-  const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const cookieHeader = cookies().getAll().map(({ name, value }) => `${name}=${value}`).join("; ");
-  const res = await fetch(`${base}/api/data/${projectId}/ops`, {
-    cache: "no-store",
+export const dynamic = "force-dynamic";
+
+type ApiOk = { project: { id: number; tokenId: number; name: string }; rows: Array<{ id: number; key: string; value: string; createdAt: string }> };
+type ApiErr = { error: string };
+type ApiResp = ApiOk | ApiErr;
+
+async function fetchData(projectId: string): Promise<ApiResp> {
+  const h = headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  if (!host) return { error: "no_host" };
+
+  const url = `${proto}://${host}/api/data/${projectId}/ops`;
+
+  // forward cookies to API so auth works on the server
+  const cookieHeader = cookies().getAll().map(c => `${c.name}=${c.value}`).join("; ");
+
+  const res = await fetch(url, {
     headers: { cookie: cookieHeader },
+    // avoid caching SSR responses
+    cache: "no-store",
   });
-  if (!res.ok) {
-    if (res.status === 403) throw new Error("Forbidden: you don't hold the required access token for role 'investor'.");
-    if (res.status === 401) throw new Error("Please connect & login first.");
-    notFound();
-  }
+
+  if (res.status === 401) return { error: "auth" };
+  if (res.status === 403) return { error: "forbidden" };
+  if (!res.ok) return { error: `http_${res.status}` };
   return res.json();
 }
 
 export default async function Page({ params }: { params: { projectId: string } }) {
   const data = await fetchData(params.projectId);
+
+  if ("error" in data) {
+    return (
+      <main style={{ maxWidth: 860, margin: "48px auto", padding: 16 }}>
+        <h1>Project {params.projectId} — ops</h1>
+        {data.error === "auth" ? (
+          <>
+            <p>Please connect & login on this domain, then refresh.</p>
+            <p><Link href="/">Go to Home</Link></p>
+          </>
+        ) : data.error === "forbidden" ? (
+          <p>Forbidden: you don’t hold the ops access token for this project.</p>
+        ) : (
+          <p>Failed to load data ({data.error}).</p>
+        )}
+      </main>
+    );
+  }
+
   return (
     <main style={{ maxWidth: 860, margin: "48px auto", padding: 16 }}>
-      <h1>Project {params.projectId} — Investor</h1>
-      <p className="muted">Showing last {data.rows.length} rows for the <b>investor</b> role.</p>
+      <h1>Project {params.projectId} — ops</h1>
+      <p className="muted">
+        Showing last {data.rows.length} rows for the <b>ops</b> role.
+      </p>
       <div className="grid">
-        {data.rows.map((row: any) => {
-          let parsed = row.value;
-          try { parsed = typeof row.value === "string" ? JSON.parse(row.value) : row.value; } catch {}
-          return (
-            <div className="card" key={row.id}>
-              <div style={{ fontSize: 12 }} className="muted">{new Date(row.createdAt).toLocaleString()}</div>
-              <div style={{ marginTop: 8 }}><b>{row.key}</b></div>
-              <pre style={{ whiteSpace: "pre-wrap" }}>
-                {typeof parsed === "string" ? parsed : JSON.stringify(parsed, null, 2)}
-              </pre>
-            </div>
-          );
-        })}
+        {data.rows.map((r) => (
+          <div key={r.id} className="card">
+            <div className="card-title">{r.key}</div>
+            <div className="card-body">{r.value}</div>
+          </div>
+        ))}
       </div>
     </main>
   );
