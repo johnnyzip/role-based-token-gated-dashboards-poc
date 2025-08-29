@@ -13,7 +13,6 @@ const DOMAIN = process.env.NEXT_PUBLIC_THIRDWEB_AUTH_DOMAIN!;
 const ADMIN_PK = process.env.AUTH_PRIVATE_KEY!;
 const CLIENT_ID = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID!;
 
-// ✅ Define client locally so it's always in scope (works on Netlify too)
 const client = createThirdwebClient({ clientId: CLIENT_ID });
 
 const auth = createAuth({
@@ -40,7 +39,6 @@ export async function GET(
       return NextResponse.json({ error: "Bad role" }, { status: 400 });
     }
 
-    // ---- SESSION (JWT) ----
     const jwt = cookies().get("jwt")?.value;
     if (!jwt) return NextResponse.json({ error: "Not logged in" }, { status: 401 });
     const v = await auth.verifyJWT({ jwt });
@@ -49,19 +47,14 @@ export async function GET(
     const addr = cookies().get("tw_address")?.value as `0x${string}` | undefined;
     if (!addr) return NextResponse.json({ error: "No address in session" }, { status: 401 });
 
-    // ---- ENSURE PROJECT EXISTS (BY tokenId) ----
     const project = await prisma.project.upsert({
       where: { tokenId: pid },
       update: {},
       create: {
-        tokenId: pid,
-        name: `Project ${pid}`,
-        slug: `project-${pid}`,
-        description: `Auto-created project ${pid}`,
+        tokenId: pid, name: `Project ${pid}`, slug: `project-${pid}`, description: `Auto-created project ${pid}`,
       },
     });
 
-    // ---- TOKEN GATE ----
     if (!ACCESS_ERC1155) {
       return NextResponse.json({ error: "Contract not configured" }, { status: 500 });
     }
@@ -70,7 +63,6 @@ export async function GET(
     const bal = await balanceOf({ contract, owner: addr, tokenId });
     if (bal === 0n) return NextResponse.json({ error: "Missing access token" }, { status: 403 });
 
-    // ---- DATA ROWS (BY DB project.id) ----
     const rows = await prisma.dashboardRow.findMany({
       where: { projectId: project.id, role },
       orderBy: { createdAt: "desc" },
