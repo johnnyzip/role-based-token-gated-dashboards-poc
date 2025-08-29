@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import prisma from "../../../prismaClient";
-import { client } from "../../../../../src/lib/client";
 import { createAuth } from "thirdweb/auth";
 import { privateKeyToAccount } from "thirdweb/wallets";
 import { getContract } from "thirdweb";
