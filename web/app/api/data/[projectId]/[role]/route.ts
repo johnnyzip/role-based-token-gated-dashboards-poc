@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import prisma from "../../../prismaClient";
+
+import { createThirdwebClient, getContract } from "thirdweb";
 import { createAuth } from "thirdweb/auth";
 import { privateKeyToAccount } from "thirdweb/wallets";
-import { getContract } from "thirdweb";
 import { balanceOf } from "thirdweb/extensions/erc1155";
 import { sepolia } from "thirdweb/chains";
 
 const ACCESS_ERC1155 = process.env.NEXT_PUBLIC_ACCESS_ERC1155 as `0x${string}`;
 const DOMAIN = process.env.NEXT_PUBLIC_THIRDWEB_AUTH_DOMAIN!;
 const ADMIN_PK = process.env.AUTH_PRIVATE_KEY!;
+const CLIENT_ID = process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID!;
+
+// ✅ Define client locally so it's always in scope (works on Netlify too)
+const client = createThirdwebClient({ clientId: CLIENT_ID });
 
 const auth = createAuth({
   domain: DOMAIN,
@@ -17,7 +22,8 @@ const auth = createAuth({
   client,
 });
 
-const roleToId = (r: "investor" | "donor" | "ops") => (r === "investor" ? 1 : r === "donor" ? 2 : 3);
+const roleToId = (r: "investor" | "donor" | "ops") =>
+  r === "investor" ? 1 : r === "donor" ? 2 : 3;
 
 export async function GET(
   _req: Request,
@@ -25,7 +31,9 @@ export async function GET(
 ) {
   try {
     const pid = Number(params.projectId);
-    if (!Number.isFinite(pid) || pid <= 0) return NextResponse.json({ error: "Bad projectId" }, { status: 400 });
+    if (!Number.isFinite(pid) || pid <= 0) {
+      return NextResponse.json({ error: "Bad projectId" }, { status: 400 });
+    }
 
     const role = params.role as "investor" | "donor" | "ops";
     if (!["investor", "donor", "ops"].includes(role)) {
@@ -54,9 +62,10 @@ export async function GET(
     });
 
     // ---- TOKEN GATE ----
-    if (!ACCESS_ERC1155) return NextResponse.json({ error: "Contract not configured" }, { status: 500 });
+    if (!ACCESS_ERC1155) {
+      return NextResponse.json({ error: "Contract not configured" }, { status: 500 });
+    }
     const tokenId = BigInt(pid * 100 + roleToId(role));
-
     const contract = getContract({ client, chain: sepolia, address: ACCESS_ERC1155 });
     const bal = await balanceOf({ contract, owner: addr, tokenId });
     if (bal === 0n) return NextResponse.json({ error: "Missing access token" }, { status: 403 });
