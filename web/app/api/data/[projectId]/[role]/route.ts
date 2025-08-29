@@ -8,7 +8,7 @@ import { createAuth } from "thirdweb/auth";
 import { privateKeyToAccount } from "thirdweb/wallets";
 import { balanceOf } from "thirdweb/extensions/erc1155";
 import { sepolia } from "thirdweb/chains";
-import prisma from "../../../../../prismaClient";
+import prisma from "../../../../prismaClient";
 
 // --- env ---
 const ACCESS_ERC1155 = process.env.NEXT_PUBLIC_ACCESS_ERC1155 as `0x${string}` | undefined;
