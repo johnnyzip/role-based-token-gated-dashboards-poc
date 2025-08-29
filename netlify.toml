@@ -5,3 +5,13 @@
 
 [build.environment]
   NODE_VERSION = "20"
+
+# ✅ Ensure Netlify’s Next runtime is used (builds SSR/API functions)
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# ✅ Ensure Prisma client/DB are available inside serverless functions
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["@prisma/client", "prisma", "thirdweb", "viem"]
+  included_files = ["prisma/**"]
