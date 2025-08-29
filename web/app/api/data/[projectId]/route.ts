@@ -5,14 +5,19 @@ export async function GET(
   _req: Request,
   { params }: { params: { projectId: string } },
 ) {
-  try {
-    const pid = Number(params.projectId);
-    if (!Number.isFinite(pid) || pid <= 0) {
-      return NextResponse.json({ error: "Bad projectId" }, { status: 400 });
-    }
+  const pid = Number(params.projectId);
+  if (!Number.isFinite(pid) || pid <= 0) {
+    return NextResponse.json({ error: "Bad projectId" }, { status: 400 });
+  }
 
-    const project = await prisma.project.findUnique({ where: { tokenId: pid } });
-    if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  try {
+    const project = await prisma.project.findUnique({
+      where: { tokenId: pid },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
 
     const rows = await prisma.dashboardRow.findMany({
       where: { projectId: project.id },
@@ -24,7 +29,4 @@ export async function GET(
   } catch (e: any) {
     return NextResponse.json({ error: String(e?.message || e) }, { status: 500 });
   }
-}
-
-  return NextResponse.json({ project, rows });
 }
