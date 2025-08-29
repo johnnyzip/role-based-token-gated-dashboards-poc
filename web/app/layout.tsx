@@ -1,7 +1,8 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { ThirdwebProvider } from "thirdweb/react";
-import { client } from "../src/lib/client";
+// (keep your client import if other files need it, but the provider here won't use it)
+// import { client } from "../src/lib/client";
 
 export const metadata: Metadata = {
   title: "Token-gated Dashboards",
@@ -12,7 +13,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <ThirdwebProvider client={client}>
+        {/* No props — matches the types in the lib Netlify is installing */}
+        <ThirdwebProvider>
           {children}
         </ThirdwebProvider>
       </body>
