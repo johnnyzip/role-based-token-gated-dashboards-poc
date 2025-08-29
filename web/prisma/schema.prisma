@@ -1,0 +1,33 @@
+// web/prisma/schema.prisma
+// SQLite-friendly schema: uses strings instead of enum/Json
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Project {
+  id          Int           @id @default(autoincrement())
+  tokenId     Int           @unique
+  name        String
+  slug        String        @unique
+  description String?
+  rows        DashboardRow[]
+  createdAt   DateTime      @default(now())
+}
+
+model DashboardRow {
+  id        Int      @id @default(autoincrement())
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId Int
+  role      String   // "investor" | "donor" | "ops"
+  key       String
+  value     String   // store JSON as a string (JSON.stringify)
+  createdAt DateTime @default(now())
+
+  @@index([projectId, role, createdAt])
+}
