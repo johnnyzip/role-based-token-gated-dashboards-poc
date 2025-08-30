@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import ConnectBtn from "../../components/ConnectBtn";
 import { useActiveAccount } from "thirdweb/react";
