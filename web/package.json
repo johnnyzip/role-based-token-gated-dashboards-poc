@@ -10,8 +10,12 @@
     "db:push": "prisma db push",
     "db:seed": "prisma db seed"
   },
-  "prisma": {
-    "seed": "ts-node prisma/seed.js"
+   "prisma": {
+    "seed": "node prisma/seed.mjs"
+  },
+  "scripts": {
+    "db:seed": "prisma db seed"
+  }
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",
