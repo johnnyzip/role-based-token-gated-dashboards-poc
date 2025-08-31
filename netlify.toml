@@ -1,0 +1,15 @@
+[build]
+  base = "web"
+  command = "npm ci && npx prisma generate && npx prisma db push --accept-data-loss && npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Use Netlify’s Next.js runtime so SSR/API routes work
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Serverless functions bundling (safe defaults)
+[functions]
+  node_bundler = "esbuild"

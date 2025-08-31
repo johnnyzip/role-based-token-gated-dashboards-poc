@@ -1,0 +1,35 @@
+// web/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id          Int            @id @default(autoincrement())
+  tokenId     Int            @unique            // the “project id” used in URLs & token math
+  imageUrl  String?        // NEW: card image
+  blurb     String?  
+  name        String
+  slug        String?
+  description String?
+  createdAt   DateTime       @default(now())
+  rows        DashboardRow[]
+}
+
+model DashboardRow {
+  id        Int      @id @default(autoincrement())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int
+  role      String   @db.VarChar(16)           // 'investor' | 'donor' | 'ops' as text
+  key       String
+  value     String                            // store JSON-as-string if you like
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+  @@index([projectId, role])
+}
