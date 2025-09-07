@@ -4,7 +4,7 @@ This starter includes:
 - **Non-transferable ERC-1155** where `tokenId == projectId` (OpenZeppelin v5 `_update` hook).
 - **Next.js 14 App Router** with **thirdweb v5** (Auth + In-App Wallets + sponsored gas on Sepolia).
 - **Server-side gating**: `/api/data/[projectId]` checks `balanceOf(address, tokenId)` before returning data.
-- **SQLite + Prisma** sample data.
+- **********************SQLite + Prisma** sample data.(actually neon postgrrs, sql to be executed within neon dash or vscode db connection, as the prisma bulshit doesnt work)************************
 
 ## Quickstart
 
